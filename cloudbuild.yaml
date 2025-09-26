@@ -1,0 +1,19 @@
+steps:
+# 1. Login to Docker Hub using the secrets
+- name: 'gcr.io/cloud-builders/docker'
+  entrypoint: 'bash'
+  args: 
+    - -c
+    - 'docker login --username=$(gcloud secrets versions access latest --secret=docker-username) --password=$(gcloud secrets versions access latest --secret=docker-password)'
+
+# 2. Build the image
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+    - 'build'
+    - '-t'
+    - 'us-central1-docker.pkg.dev/aetherchain-v2/aetherchain-repo/aetherchain-worker:v11'
+    - '.'
+
+# 3. Push the image to your Artifact Registry
+images:
+- 'us-central1-docker.pkg.dev/aetherchain-v2/aetherchain-repo/aetherchain-worker:v11'

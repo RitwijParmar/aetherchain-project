@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=aetherchain_db
+      - POSTGRES_USER=aetherchain_user
+      - POSTGRES_PASSWORD=aetherchain_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+
+  neo4j:
+    image: neo4j:4.4
+    environment:
+      - NEO4J_AUTH=neo4j/neo4jpassword
+    volumes:
+      - neo4j_data:/data
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  web:
+    build: .
+    # For our test, we will run the command that SENDS the task.
+    # It will start, send the task, and then exit.
+    command: python manage.py process_test_event
+    volumes:
+      - ./src:/app
+    depends_on:
+      - postgres
+      - neo4j
+      - rabbitmq
+
+  worker:
+    build: .
+    # This service runs the command that LISTENS for tasks.
+    # It will stay running in the background.
+    command: celery -A aetherchain worker -l info
+    volumes:
+      - ./src:/app
+    depends_on:
+      - postgres
+      - neo4j
+      - rabbitmq
+
+volumes:
+  postgres_data:
+  neo4j_data:

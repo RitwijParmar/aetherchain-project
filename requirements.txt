@@ -1,0 +1,11 @@
+celery==5.3.6
+Django
+djangorestframework
+django-neomodel
+psycopg2-binary
+gunicorn
+python-dotenv
+google-cloud-pubsub==2.13.11
+requests
+neomodel
+dj-database-url

@@ -1,0 +1,19 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Django
+db.sqlite3
+
+# Local Environment Files
+.env
+*.env
+
+# GCP / Supabase Keys
+deployer-key.json
+
+# IDE / OS specific
+.vscode/
+.idea/
+.DS_Store

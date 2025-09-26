@@ -1,0 +1,43 @@
+{
+  "components": [
+    {
+      "data": {
+        "contents_checksum": "35e607e4911f1ead27af83bca20c6fc1e259ddb08edd1e677666d34ac708e31f",
+        "source": "",
+        "type": "tar"
+      },
+      "dependencies": [
+        "gke-gcloud-auth-plugin",
+        "kubectl"
+      ],
+      "details": {
+        "description": "Provides kubectl executables.",
+        "display_name": "kubectl (Platform Specific)"
+      },
+      "id": "kubectl-darwin-arm",
+      "is_configuration": false,
+      "is_hidden": true,
+      "is_required": false,
+      "platform": {
+        "architectures": [
+          "arm"
+        ],
+        "operating_systems": [
+          "MACOSX"
+        ]
+      },
+      "platform_required": true,
+      "version": {
+        "build_number": 20240726141759,
+        "version_string": "1.28.12"
+      }
+    }
+  ],
+  "revision": 20240809134940,
+  "schema_version": {
+    "no_update": false,
+    "url": "https://dl.google.com/dl/cloudsdk/channels/rapid/google-cloud-sdk.tar.gz",
+    "version": 3
+  },
+  "version": "488.0.0"
+}

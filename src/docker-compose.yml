@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # 1. The PostgreSQL Database
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=aetherchain_db
+      - POSTGRES_USER=aetherchain_user
+      - POSTGRES_PASSWORD=aetherchain_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+
+  # 2. The Neo4j Graph Database
+  neo4j:
+    image: neo4j:4.4
+    environment:
+      - NEO4J_AUTH=neo4j/neo4jpassword
+    volumes:
+      - neo4j_data:/data
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+
+  # 3. The RabbitMQ Message Broker (Post Office)
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports:
+      - "5672:5672"   # For Celery to connect
+      - "15672:15672" # For the web management UI
+
+  # 4. The Django Web/Client App (The one that sends the task)
+  web:
+    build: . # Build the image from the Dockerfile in this directory
+    command: python manage.py process_test_event # For this test, we just run our command
+    volumes:
+      - ./src:/app # Mount our code so we can see changes without rebuilding
+    depends_on:
+      - postgres
+      - neo4j
+      - rabbitmq
+
+  # 5. The Celery Worker (The Mail Carrier)
+  worker:
+    build: . # Also builds from the same Dockerfile
+    command: celery -A aetherchain worker -l info # But runs a different command!
+    volumes:
+      - ./src:/app
+    depends_on:
+      - postgres
+      - neo4j
+      - rabbitmq
+
+volumes:
+  postgres_data:
+  neo4j_data:
