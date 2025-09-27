@@ -1,10 +1,12 @@
-from django.conf import settings
-import requests
+import os
 import json
-import re # Import the regular expressions library
+import requests
 from celery import shared_task
 from .models import Alert
 from neomodel import db
+from django.conf import settings
+from google.auth import default as gcp_auth_default
+from google.auth.transport.requests import Request as gcp_auth_request
 
 @shared_task
 def run_impact_analysis(event_data):
@@ -23,58 +25,86 @@ def run_impact_analysis(event_data):
     affected_assets_str = ", ".join([f"Product SKU {row[0]} on Route {row[1]}" for row in results])
     print(f"--- [TASK LOGIC] Found affected assets: {affected_assets_str}")
 
-    print("--- [TASK LOGIC] Calling Hugging Face API...")
-    prompt_template = f"""Analyze the impact of a "{event_type}" event at "{event_location}" on assets: {affected_assets_str}.
-Respond ONLY with the analysis in three specific parts separated by "|||". Do not add any extra text, titles, or formatting.
-
-Part 1: A detailed impact analysis.
-|||
-Part 2: A specific, recommended action.
-|||
-Part 3: A short summary description for a title.
-"""
-    API_URL = "https://router.huggingface.co/v1/chat/completions"
-    HF_TOKEN = settings.HF_TOKEN
-    headers = { "Authorization": f"Bearer {HF_TOKEN}", "Content-Type": "application/json" }
-    payload = { "messages": [{"role": "user", "content": prompt_template}], "model": "meta-llama/Meta-Llama-3-8B-Instruct", "stream": False }
-    response = requests.post(API_URL, headers=headers, json=payload)
-
-    if response.status_code != 200:
-        print(f"--- [TASK LOGIC] Error from API. Status: {response.status_code}")
-        return
-
-    response_data = response.json()
+    print("--- [TASK LOGIC] Calling Vertex AI Mistral Small API...")
+    
     try:
-        llm_text_response = response_data['choices'][0]['message']['content']
-        print(f"--- [TASK LOGIC] SUCCESS! AI Response received.")
+        credentials, project_id = gcp_auth_default()
+        if not credentials.valid:
+            credentials.refresh(gcp_auth_request())
+        access_token = credentials.token
+
+        model_id = "mistral-small-2503"
+        region = "us-central1"
+        url = f"https://{region}-aiplatform.googleapis.com/v1/projects/{project_id}/locations/{region}/publishers/mistralai/models/{model_id}:rawPredict"
         
-        # --- BULLETPROOF PARSING LOGIC ---
-        # Use regular expressions to split, allowing for whitespace and extra text
-        parts = re.split(r'\s*\|\|\|\s*', llm_text_response.strip())
+        # Use structured JSON output instead of text parsing
+        payload = {
+            "model": model_id,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a supply chain risk analyst. Provide analysis in the exact JSON format specified."
+                },
+                {
+                    "role": "user", 
+                    "content": f"Analyze the impact of a '{event_type}' event at '{event_location}' affecting these assets: {affected_assets_str}."
+                }
+            ],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "supply_chain_analysis",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "impact_analysis": {
+                                "type": "string",
+                                "description": "Detailed impact analysis of the event"
+                            },
+                            "recommended_action": {
+                                "type": "string", 
+                                "description": "Specific recommended action to mitigate the impact"
+                            },
+                            "summary_description": {
+                                "type": "string",
+                                "description": "Short summary description suitable for a title"
+                            }
+                        },
+                        "required": ["impact_analysis", "recommended_action", "summary_description"],
+                        "additionalProperties": False
+                    }
+                }
+            }
+        }
         
-        if len(parts) == 3:
-            # Clean each part aggressively
-            analysis = re.sub(r'^\s*Part \d:.*?\n', '', parts[0]).strip()
-            action = re.sub(r'^\s*Part \d:.*?\n', '', parts[1]).strip()
-            summary = re.sub(r'^\s*Part \d:.*?\n', '', parts[2]).strip()
+        headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+        
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
 
-            # Further cleaning to remove common AI artifacts
-            analysis = analysis.replace("Impact Analysis:", "").strip()
-            action = action.replace("Recommended Action:", "").strip()
-            summary = summary.replace("Summary Description:", "").strip()
-
-            if not all([analysis, action, summary]):
-                 print(f"--- [TASK LOGIC] ERROR: One of the parsed parts is empty after cleaning. Full response: {llm_text_response}")
-                 return
-
+        response_data = response.json()
+        llm_text_response = response_data["choices"][0]["message"]["content"]
+        
+        print(f"--- [TASK LOGIC] SUCCESS! AI Response received from Mistral.")
+        
+        # Parse the JSON response directly
+        try:
+            analysis_data = json.loads(llm_text_response)
+            
             new_alert = Alert.objects.create(
-                impact_analysis=analysis,
-                recommended_action=action,
-                summary_description=summary
+                impact_analysis=analysis_data["impact_analysis"],
+                recommended_action=analysis_data["recommended_action"],
+                summary_description=analysis_data["summary_description"]
             )
             print(f"--- [TASK LOGIC] Successfully saved Alert ID: {new_alert.id} to the database. ---")
-        else:
-            print(f"--- [TASK LOGIC] ERROR: LLM response could not be split into 3 parts. Parts found: {len(parts)}. Full response: {llm_text_response}")
+            
+        except (json.JSONDecodeError, KeyError) as parse_err:
+            print(f"--- [TASK LOGIC] JSON parsing error: {parse_err}")
+            print(f"--- [TASK LOGIC] Response content: {llm_text_response}")
 
+    except requests.exceptions.HTTPError as http_err:
+        print(f"--- [TASK LOGIC] HTTP Error calling Mistral API: {http_err}")
+        print(f"--- [TASK LOGIC] Response Body: {response.text}")
     except Exception as e:
         print(f"--- [TASK LOGIC] Error processing response or saving to DB: {e}")

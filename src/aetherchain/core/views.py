@@ -14,6 +14,7 @@ def process_task(request):
         event_data_str = base64.b64decode(pubsub_message).decode('utf-8')
         event_data = json.loads(event_data_str)
         print(f"--- [HTTP WORKER] Received task via Pub/Sub Push: {event_data} ---")
+        # We call the task synchronously for Cloud Run
         run_impact_analysis(event_data)
         return HttpResponse(status=204)
     except Exception as e:
