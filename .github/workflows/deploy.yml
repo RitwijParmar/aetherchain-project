@@ -7,9 +7,7 @@ on:
 
 jobs:
   deploy:
-    # This line is the definitive fix. It grants access to the secrets.
     environment: production
-    
     name: Build and Deploy AetherChain
     runs-on: ubuntu-latest
 
