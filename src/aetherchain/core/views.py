@@ -23,7 +23,7 @@ def process_task(request):
         event_data_str = base64.b64decode(pubsub_message).decode('utf-8')
         event_data = json.loads(event_data_str)
         print(f"--- [HTTP WORKER] Received task via Pub/Sub Push: {event_data} ---")
-        run_impact_analysis(event_data, save_to_db=True) # Explicitly save to DB
+        run_impact_analysis(event_data, save_to_db=True)
         return HttpResponse(status=204)
     except Exception as e:
         print(f"Error processing Pub/Sub message: {e}")
@@ -35,27 +35,35 @@ class AlertViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AlertSerializer
     permission_classes = [IsBearerAuthenticated]
 
-# --- NEW: "What-If" Simulation Endpoint ---
+# --- FINAL CORRECTED "What-If" Simulation Endpoint ---
 class SimulateImpactView(APIView):
     """
-    Accepts a POST request with a location to run a simulated impact analysis
-    without saving the result to the database.
+    Accepts a POST request with either a 'location' or a 'supplier_name'
+    to run a simulated impact analysis without saving the result.
     """
-    permission_classes = [IsBearerAuthenticated] # Secure this endpoint
+    permission_classes = [IsBearerAuthenticated]
 
     def post(self, request, *args, **kwargs):
         location = request.data.get('location')
-        if not location:
-            return Response({'error': 'Location is a required field.'}, status=400)
+        supplier_name = request.data.get('supplier_name')
+        
+        event_data = None
 
-        # Create the same event_data structure our task function expects
-        event_data = {
-            "description": f"Simulated what-if analysis for {location}",
-            "location": location,
-            "type": "Simulated Disruption"
-        }
+        if location:
+            event_data = {
+                "description": f"Simulated what-if analysis for {location}",
+                "location": location
+            }
+        elif supplier_name:
+            event_data = {
+                "description": f"Simulated what-if analysis for supplier {supplier_name}",
+                "supplier_name": supplier_name,
+                "event_type": request.data.get('event_type', 'Supplier Disruption')
+            }
 
-        # Call the core logic, but DO NOT save the result to the database
+        if not event_data:
+            return Response({'error': 'Either "location" or "supplier_name" must be provided.'}, status=400)
+
         analysis_result = run_impact_analysis(event_data, save_to_db=False)
 
         if analysis_result:
