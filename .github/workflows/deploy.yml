@@ -7,6 +7,11 @@ on:
 
 jobs:
   deploy:
+    # THIS IS THE CRITICAL CORRECTION:
+    # It assigns this job to the 'production' environment, giving it
+    # access to the environment's secrets.
+    environment: production
+    
     name: Build and Deploy AetherChain
     runs-on: ubuntu-latest
 
@@ -14,7 +19,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # The ${{...}} syntax is now correctly formatted for GitHub Actions
+    # This will now correctly find the secret from the 'production' environment
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v1
       with:
@@ -43,7 +48,7 @@ jobs:
           --allow-unauthenticated \
           --vpc-connector=aetherchain-connector \
           --vpc-egress=private-ranges-only \
-          --set-secrets="POSTGRES_URI=aetherchain-postgres-uri:latest,NEO4J_PASSWORD=aetherchain-neo4j-password:latest,DJANGO_SECRET_KEY=aetherchain-django-secret-key:latest,API_TOKEN=aetherchain-api-bearer-token:latest"
+          --set-secrets="POSTG-RES_URI=aetherchain-postgres-uri:latest,NEO4J_PASSWORD=aetherchain-neo4j-password:latest,DJANGO_SECRET_KEY=aetherchain-django-secret-key:latest,API_TOKEN=aetherchain-api-bearer-token:latest"
 
     - name: Deploy and Run Migrator Job
       run: |
