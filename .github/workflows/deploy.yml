@@ -1,6 +1,5 @@
 name: Deploy to Cloud Run
 
-# This workflow runs on every push to the 'main' branch
 on:
   push:
     branches:
@@ -12,38 +11,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Check out the repository code so the workflow can access it
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # 2. Authenticate to Google Cloud using the service account key from GitHub secrets
+    # CORRECTED: The backslashes before variables are removed
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v1
       with:
         credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-    # 3. Set up the gcloud command-line tool in the runner environment
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
       with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        project_id: '${{ secrets.GCP_PROJECT_ID }}'
 
-    # 4. Build the Docker image using Google Cloud Build and push it to the registry
     - name: Build and Push Image
       id: build
       run: |
         VERSION_TAG="v$(date +%Y%m%d%H%M%S)"
         IMAGE_TAG="gcr.io/${{ secrets.GCP_PROJECT_ID }}/aetherchain-worker:$VERSION_TAG"
-        gcloud builds submit . --tag "$IMAGE_TAG" --project="${{ secrets.GCP_PROJECT_ID }}"
-        # Expose the new image tag to subsequent steps
+        gcloud builds submit . --tag "$IMAGE_TAG" --project="${{ secrets.GGCP_PROJECT_ID }}"
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-    # 5. Deploy the new image to the aetherchain-worker Cloud Run service
     - name: Deploy Main Service
       run: |
         gcloud run deploy aetherchain-worker           --image ${{ steps.build.outputs.IMAGE_TAG }}           --platform managed           --region us-central1           --project ${{ secrets.GCP_PROJECT_ID }}           --allow-unauthenticated           --vpc-connector=aetherchain-connector           --vpc-egress=private-ranges-only           --set-secrets="POSTGRES_URI=aetherchain-postgres-uri:latest,NEO4J_PASSWORD=aetherchain-neo4j-password:latest,DJANGO_SECRET_KEY=aetherchain-django-secret-key:latest,API_TOKEN=aetherchain-api-bearer-token:latest"
 
-    # 6. Update the migrator job with the new image and then execute it
     - name: Deploy and Run Migrator Job
       run: |
         gcloud run jobs update aetherchain-migrator           --image ${{ steps.build.outputs.IMAGE_TAG }}           --command="python","manage.py","migrate"           --args="--no-input"           --region us-central1           --project ${{ secrets.GCP_PROJECT_ID }}           --vpc-connector=aetherchain-connector           --vpc-egress=private-ranges-only           --set-secrets="POSTGRES_URI=aetherchain-postgres-uri:latest"
