@@ -1,277 +1,255 @@
 
 
-# AetherChain: A Predictive Supply Chain Intelligence Platform
+AetherChain: A Predictive Supply Chain Intelligence Platform
 
-AetherChain is a 100% serverless intelligence platform built on Google Cloud Platform. It is designed to autonomously detect real-world supply chain disruptions, analyze their impact using a graph database and Large Language Models, and provide actionable recommendations.
 
-## Core Features
+1. Introduction & Project Philosophy
 
-*   **Event-Driven Architecture:** Utilizes Google Cloud Pub/Sub to create a decoupled and scalable system.
-*   **AI-Powered Analysis:** Leverages Google's Vertex AI models to perform Retrieval-Augmented Generation (RAG), transforming raw disruption data into qualitative impact analysis and actionable recommendations.
-*   **Graph-Based Intelligence:** Models the supply chain as a graph in Neo4j AuraDB, enabling complex, multi-tier impact analysis that traditional relational databases cannot perform.
-*   **"What-If" Simulation:** A secure API endpoint allows for on-demand risk assessment of hypothetical disruption scenarios (e.g., "What is the impact of a factory fire at Supplier X?").
-*   **Automated Intelligence Gathering:** A scheduled Cloud Function acts as a "sentinel," automatically scanning real-world news APIs (like GDELT) for potential disruption events.
+AetherChain is a serverless intelligence platform built on Google Cloud Platform, designed to transform supply chain management from a reactive to a proactive discipline.
 
----
+Our core philosophy is that in an increasingly volatile world, organizations can no longer afford to learn about disruptions after they have occurred. AetherChain was built to serve as an autonomous early warning system. It continuously scans for real-world events, uses a graph-based representation of the supply chain to understand complex relationships, and leverages Large Language Models to translate raw data into human-readable, actionable intelligence.
 
-## Architectural Overview
+This document serves as the single source of truth for the project's architecture, code, operational procedures, and future roadmap.
 
-The system operates through a seamless, event-driven flow:
+2. Important Notice: Operational Status & Service Dependencies
 
-1.  **Event Trigger:**
-    *   A **Google Cloud Scheduler** job runs on a periodic basis (e.g., daily).
-    *   It triggers the **`aetherchain-gdelt-sentinel` Google Cloud Function**.
+This project's architecture relies on several best-in-class, third-party managed services for its core database functionality. It is critical for any user or developer to be aware of the current billing status of these dependencies.
 
-2.  **Intelligence Gathering:**
-    *   The **Cloud Function** queries the GDELT news API for articles matching keywords like "port congestion" or "factory fire" at locations of interest.
-    *   If a relevant event is found, the function formats a JSON message.
-    *   This message is published to the **`aetherchain-tasks` Pub/Sub Topic**.
+Trial Account Dependency: The Neo4j AuraDB (graph database) and Supabase (PostgreSQL database) instances for this project are currently configured using free-tier or time-limited trial accounts. These accounts are subject to suspension, data deletion, or functional limitations upon the expiration of their respective trial periods.
 
-3.  **Core Analysis Pipeline:**
-    *   A push subscription on the topic immediately sends the message via an HTTP POST request to the **`aetherchain-worker` Cloud Run Service**.
-    *   This **Django-based service** receives the request and initiates the analysis.
-    *   It connects to **Neo4j AuraDB** and executes a Cypher query to find all assets (Products, Routes, etc.) impacted by the event.
-    *   The service constructs a detailed prompt with the affected assets and calls the **Vertex AI (Mistral Small) API**.
-    *   The LLM returns a structured JSON object containing its analysis, recommendation, and summary.
-    *   The worker service parses this response and saves it as a new `Alert` record in the **Supabase PostgreSQL** database.
+Impact on Functionality: Should these external services be suspended, the AetherChain platform will cease to function correctly, as it will lose its ability to read from its knowledge graph and write to its alert log. All API endpoints that rely on this data will fail.
 
-4.  **Data Access & Simulation:**
-    *   A secure, token-protected **REST API** exposes the generated alerts.
-    *   A **`/api/simulate/` endpoint** allows authorized users to bypass the sentinel and directly trigger the analysis pipeline for hypothetical scenarios.
+Recommendation for Production Use: For long-term stability and any mission-critical or production-level deployment, it is essential to upgrade the Neo4j AuraDB and Supabase accounts to a permanent, paid billing plan.
 
-## Technology Stack
+Furthermore, the Google Cloud Platform components are operating on a standard, post-free-trial account. All usage of Cloud Run, Cloud Functions, Vertex AI, and other GCP services will incur costs according to standard pricing.
 
-*   **Backend:** Python 3.11, Django, Gunicorn
-*   **Cloud Platform:** Google Cloud Platform (GCP)
-    *   **Compute:** Cloud Run (Services & Jobs), Cloud Functions
-    *   **Messaging:** Cloud Pub/Sub
-    *   **Networking:** VPC, VPC Connector
-    *   **AI/ML:** Vertex AI
-    *   **Security:** Secret Manager, IAM
-    *   **Deployment:** Cloud Build
-*   **Databases:**
-    *   **Graph Database:** Neo4j AuraDB (Cloud Hosted)
-    *   **Relational Database:** Supabase (Cloud Hosted PostgreSQL)
-*   **Data Source:** GDELT Project API
+3. Core Capabilities
 
----
+Event-Driven Architecture: A decoupled and scalable system built on Google Cloud Pub/Sub, ensuring that components can evolve independently.
 
-## Getting Started & Local Setup
+AI-Powered Analysis: Leverages the Mistral Small model via Google Vertex AI to perform Retrieval-Augmented Generation (RAG). This transforms a simple list of affected assets into a qualitative impact analysis and a specific, actionable recommendation.
 
-### Prerequisites
+Graph-Based Intelligence: The supply chain is modeled as a rich graph in Neo4j AuraDB. This allows for complex, multi-tier impact analysis that traditional databases cannot perform, such as analyzing disruptions by a specific port or a single component supplier.
 
-*   Python 3.11
-*   `gcloud` CLI (authenticated to your GCP account)
-*   Docker Desktop (for local building, optional)
-*   Git
+"What-If" Simulation: A secure API endpoint allows for on-demand risk assessment of hypothetical scenarios, enabling strategic planning.
 
-### 1. Clone the Repository
+Automated Intelligence Gathering: A scheduled Google Cloud Function acts as an autonomous "sentinel," continuously scanning the GDELT news API for potential disruption events.
 
-```bash
+Automated CI/CD: A fully configured GitHub Actions pipeline provides continuous integration and deployment, enabling rapid, reliable, and zero-touch updates to the platform.
+
+4. Technology Stack
+
+Backend: Python 3.11, Django, Gunicorn
+
+Cloud Platform: Google Cloud Platform (GCP)
+
+Compute: Cloud Run (Services & Jobs), Cloud Functions
+
+Messaging: Cloud Pub/Sub
+
+Networking: VPC, VPC Connector
+
+AI/ML: Vertex AI
+
+Security: Secret Manager, IAM
+
+Deployment: Cloud Build, GitHub Actions
+
+Databases:
+
+Graph Database: Neo4j AuraDB (Cloud Hosted - Trial Account)
+
+Relational Database: Supabase (Cloud Hosted PostgreSQL - Trial Account)
+
+Data Source: GDELT Project API
+
+5. Architectural Deep Dive
+
+The system operates through a seamless, automated flow:
+
+Scheduled Trigger: The Google Cloud Scheduler job run-gdelt-sentinel-daily runs once per day, making an HTTP GET request to the aetherchain-gdelt-sentinel Cloud Function.
+
+Intelligence Gathering (aetherchain-gdelt-sentinel): The Cloud Function queries the GDELT news API for articles from the last 24 hours matching keywords like "port congestion." If relevant events are found, it publishes a JSON message to the aetherchain-tasks Pub/Sub Topic.
+
+Core Analysis Pipeline (aetherchain-worker): The Django-based service receives the event, connects to Neo4j AuraDB, and executes a Cypher query. It constructs a prompt for the Vertex AI (Mistral Small) API and saves the structured JSON response to the Supabase PostgreSQL database.
+
+Data Access & Simulation (API): A secure, token-protected REST API (/api/alerts/ and /api/simulate/) exposes the platform's intelligence for consumption.
+
+6. Project Setup and Local Development
+6.1. Prerequisites
+
+Python 3.11
+
+gcloud CLI (authenticated to your GCP account)
+
+Docker Desktop
+
+Git
+
+6.2. Initial Setup
+
+Clone the Repository:
+
+code
+Bash
+download
+content_copy
+expand_less
 git clone https://github.com/RitwijParmar/aetherchain-project.git
 cd aetherchain-project
-```
 
-### 2. Set Up Virtual Environment
+Set Up Virtual Environment:
 
-```bash
+code
+Bash
+download
+content_copy
+expand_less
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-```
 
-### 3. Environment Configuration
+Local Environment Configuration: Create a .env file in the project root. This file is ignored by Git and must never be committed.
 
-Create a `.env` file in the project root (`~/aetherchain-project/`) for local development. This file stores your credentials locally and should **never** be committed to Git.
+File: .env
 
-**File: `.env`**
-```
-# PostgreSQL Database URI
-POSTGRES_URI="postgresql://postgres:R@p1182002@db.zkbaafhkxwfkaeghvccr.supabase.co:5432/postgres"
-
-# Neo4j Graph Database Credentials
-NEO4J_URI="7f3e44ae.databases.neo4j.io"
+code
+Code
+download
+content_copy
+expand_less
+POSTGRES_URI="[Your Supabase PostgreSQL URI]"
+NEO4J_URI="[Your Neo4j AuraDB Host]"
 NEO4J_USERNAME="neo4j"
-NEO4J_PASSWORD="AetherChainIsLive12345"
-
-# Google Cloud Project ID
+NEO4J_PASSWORD="[Your Neo4j Password]"
 GCP_PROJECT_ID="aetherchain-v2"
+SECRET_KEY="[A strong, randomly generated Django Secret Key]"
+API_TOKEN="[A strong, randomly generated API Token for local testing]"
+6.3. Database Seeding
+6.3.1. Neo4j Graph Database
 
-# Django Secret Key (generate a new one for production)
-SECRET_KEY="django-insecure-local-development-key"
+Run the following query in your Neo4j Aura Browser to ensure a clean and correctly structured graph. This script is idempotent and can be run safely multiple times.
 
-# API Token for testing the secure API locally
-API_TOKEN="your-strong-local-api-token"
-```
+code
+Cypher
+download
+content_copy
+expand_less
+// This script will idempotently create the required graph schema.
+MERGE (p1:Port {name: 'Port of Los Angeles'});
+MERGE (r1:Route {route_id: 'VNHCM-USLAX'});
+MERGE (prod1:Product {sku: 'SHOE-ABC'});
+MERGE (prod2:Product {sku: 'BOOT-XYZ'});
+MERGE (s1:Supplier {name: 'Vietnam Footwear Co.', location: 'Ho Chi Minh City, Vietnam'});
 
-### 4. Database Setup
+// Merge relationships to ensure a fully connected graph
+MERGE (r1)-[:DESTINED_FOR]->(p1);
+MERGE (prod1)-[:CARRIES]->(r1);
+MERGE (prod2)-[:CARRIES]->(r1);
+MERGE (s1)-[:SUPPLIES]->(prod1);
+6.3.2. PostgreSQL Database
 
-#### a) Neo4j Graph Database (CRITICAL)
+Run standard Django migrations to create the Alert table.
 
-The database must be seeded with the correct, fully connected graph. Run the following query in your Neo4j Aura Browser to ensure a clean state.
-
-```cypher
-// WARNING: This deletes all existing data.
-MATCH (n) DETACH DELETE n;
-
-// Recreate the entire graph from scratch
-CREATE (p1:Port {name: 'Port of Los Angeles'})
-CREATE (r1:Route {route_id: 'VNHCM-USLAX'})
-CREATE (prod1:Product {sku: 'SHOE-ABC'})
-CREATE (prod2:Product {sku: 'BOOT-XYZ'})
-CREATE (s1:Supplier {name: 'Vietnam Footwear Co.', location: 'Ho Chi Minh City, Vietnam'})
-
-// Create all necessary relationships
-CREATE (r1)-[:DESTINED_FOR]->(p1)
-CREATE (prod1)-[:CARRIES]->(r1)
-CREATE (prod2)-[:CARRIES]->(r1)
-CREATE (s1)-[:SUPPLIES]->(prod1);
-```
-
-#### b) PostgreSQL Database
-
-Run the standard Django migrations to create the `Alert` table in your Supabase instance.
-
-```bash
-python src/manage.py migrate```
-
-### 5. Run the Local Development Server
-
-```bash
+code
+Bash
+download
+content_copy
+expand_less
+python src/manage.py migrate
+6.4. Running the Local Development Server
+code
+Bash
+download
+content_copy
+expand_less
 python src/manage.py runserver
-```
+7. Automated CI/CD Deployment
 
----
+The project is configured with a complete CI/CD pipeline using GitHub Actions. All deployments are handled automatically upon pushing to the main branch.
 
-## Cloud Deployment
+7.1. Deployment Prerequisites (One-Time Setup)
 
-Deployment is handled via a manual script that uses Google Cloud Build. The CI/CD pipeline via GitHub Actions is **non-functional and should not be used**.
+All necessary GCP APIs are enabled (cloudbuild.googleapis.com, run.googleapis.com, secretmanager.googleapis.com, etc.).
 
-### 1. Prerequisites (One-Time Setup)
+A GitHub Environment named production has been created.
 
-*   All GCP APIs must be enabled (`cloudbuild.googleapis.com`, `run.googleapis.com`, `secretmanager.googleapis.com`, etc.).
-*   The following secrets must be created in **Google Cloud Secret Manager**:
-    *   `aetherchain-postgres-uri`
-    *   `aetherchain-neo4j-password`
-    *   `aetherchain-django-secret-key` (Use a strong, randomly generated key)
-    *   `aetherchain-api-bearer-token` (Use a strong, randomly generated token)
-*   **IAM Permissions must be granted:**
-    *   The service account for **`aetherchain-worker`** needs the `Secret Manager Secret Accessor` role for all four secrets.
-    *   The **Default Compute Engine service account** (`[PROJECT_NUMBER]-compute@...`) needs the `Secret Manager Secret Accessor` role for the `aetherchain-postgres-uri` secret (this is for the migrator job).
+The GCP_PROJECT_ID and GCP_SA_KEY (a JSON key for a dedicated GCP service account) secrets are stored as Environment Secrets within the production environment on GitHub.
 
-### 2. The Deployment Script
+The application secrets (aetherchain-postgres-uri, aetherchain-neo4j-password, etc.) are stored in Google Cloud Secret Manager.
 
-The `deploy.sh` script is the single source of truth for deployment. It automatically handles versioning, building, and deploying the application and its database migrations.
+All necessary IAM Permissions are granted to the relevant service accounts as outlined in the project's operational history.
 
-**File: `deploy.sh`**
-```bash
-#!/bin/bash
-set -e
-PROJECT_ID="aetherchain-v2"
-REGION="us-central1"
-SERVICE_NAME="aetherchain-worker"
-MIGRATOR_JOB_NAME="aetherchain-migrator"
+7.2. The CI/CD Workflow
 
-VERSION_TAG="v\$(date +%Y%m%d%H%M%S)"
-IMAGE_TAG="gcr.io/\${PROJECT_ID}/\${SERVICE_NAME}:\${VERSION_TAG}"
-echo "--- Generated unique image tag: \${IMAGE_TAG} ---"
+The .github/workflows/deploy.yml file governs the deployment. It automatically builds a new Docker image, deploys it to the aetherchain-worker service with all secrets mounted, and runs the aetherchain-migrator job.
 
-echo "--- Building and pushing image... ---"
-gcloud builds submit . --tag "\${IMAGE_TAG}" --project="\${PROJECT_ID}"
+7.3. How to Deploy
 
-echo "--- Deploying service '\${SERVICE_NAME}' with secure secrets... ---"
-gcloud run deploy "\${SERVICE_NAME}" \
-  --image "\${IMAGE_TAG}" \
-  --platform managed \
-  --region "\${REGION}" \
-  --project="\${PROJECT_ID}" \
-  --allow-unauthenticated \
-  --vpc-connector="aetherchain-connector" \
-  --vpc-egress="private-ranges-only" \
-  --set-secrets="POSTGRES_URI=aetherchain-postgres-uri:latest,NEO4J_PASSWORD=aetherchain-neo4j-password:latest,DJANGO_SECRET_KEY=aetherchain-django-secret-key:latest,API_TOKEN=aetherchain-api-bearer-token:latest"
+Simply commit your changes and push them to the main branch. The CI/CD pipeline will handle the rest.
 
-echo "--- Updating and running database migrator job... ---"
-gcloud run jobs update "\${MIGRATOR_JOB_NAME}" \
-  --image "\${IMAGE_TAG}" \
-  --command="python","manage.py","migrate" \
-  --args="--no-input" \
-  --region "\${REGION}" \
-  --project="\${PROJECT_ID}" \
-  --vpc-connector="aetherchain-connector" \
-  --vpc-egress="private-ranges-only" \
-  --set-secrets="POSTGRES_URI=aetherchain-postgres-uri:latest"
+code
+Bash
+download
+content_copy
+expand_less
+git push origin main
+8. API Reference
 
-gcloud run jobs execute "\${MIGRATOR_JOB_NAME}" --region "\${REGION}" --project="\${PROJECT_ID}" --wait
+Base URL: https://aetherchain-worker-210451460324.us-central1.run.app
 
-echo "--- Deployment of version \${VERSION_TAG} complete. ---"
-```
+8.1. List Alerts
 
-### 3. Execution
+Endpoint: /api/alerts/
 
-```bash
-# Make the script executable (one time)
-chmod +x deploy.sh
+Method: GET
 
-# Run the deployment
-./deploy.sh
-```
+Authentication: Bearer Token
 
----
+Headers: Authorization: Bearer [YOUR_API_TOKEN]
 
-## API Endpoints
+8.2. "What-If" Simulation
 
-**Base URL:** `https://aetherchain-worker-210451460324.us-central1.run.app`
+Endpoint: /api/simulate/
 
-### 1. List Alerts
+Method: POST
 
-*   **Endpoint:** `/api/alerts/`
-*   **Method:** `GET`
-*   **Authentication:** Bearer Token
-*   **Headers:** `Authorization: Bearer [YOUR_API_TOKEN]`
-*   **Success Response (200 OK):**
-    ```json
-    [
-        {
-            "id": 1,
-            "impact_analysis": "A factory fire at Vietnam Footwear Co. will halt production...",
-            "recommended_action": "Immediately source alternative suppliers for SHOE-ABC...",
-            "summary_description": "Critical Fire at Vietnam Footwear Co. impacting SHOE-ABC",
-            "created_at": "2025-09-28T21:00:00Z"
-        }
-    ]
-    ```
+Authentication: Bearer Token
 
-### 2. "What-If" Simulation
+Headers: Authorization: Bearer [YOUR_API_TOKEN], Content-Type: application/json
 
-*   **Endpoint:** `/api/simulate/`
-*   **Method:** `POST`
-*   **Authentication:** Bearer Token
-*   **Headers:** `Authorization: Bearer [YOUR_API_TOKEN]`, `Content-Type: application/json`
-*   **Request Body (Supplier Disruption):**
-    ```json
-    {
-        "supplier_name": "Vietnam Footwear Co.",
-        "event_type": "Factory Fire"
-    }
-    ```
-*   **Request Body (Location Disruption):**
-    ```json
-    {
-        "location": "Port of Los Angeles",
-        "event_type": "Port Congestion"
-    }
-    ```
-*   **Success Response (200 OK):** Returns the direct, unsaved JSON analysis from the LLM.
-    ```json
-    {
-        "impact_analysis": "A factory fire at Vietnam Footwear Co. will halt production...",
-        "recommended_action": "Immediately source alternative suppliers for SHOE-ABC...",
-        "summary_description": "Critical Fire at Vietnam Footwear Co. impacting SHOE-ABC"
-    }
-    ```
-*   **Not Found Response (404 Not Found):**
-    ```json
-    {
-        "message": "No affected assets found or an error occurred during analysis."
-    }
-    ```
+Request Body (Supplier Disruption):
+
+code
+JSON
+download
+content_copy
+expand_less
+{
+    "supplier_name": "Vietnam Footwear Co."
+}
+
+Request Body (Location Disruption):
+
+code
+JSON
+download
+content_copy
+expand_less
+{
+    "location": "Port of Los Angeles"
+}
+
+Success Response (200 OK): The direct, unsaved JSON analysis from the LLM.
+
+9. Future Roadmap
+
+With the core platform now stable and automated, the following strategic initiatives can be pursued:
+
+Upgrade Service Plans: The highest priority is to move the Neo4j and Supabase databases to permanent, paid plans to ensure production stability and remove the limitations of the trial accounts.
+
+Financial Impact Analysis: Enhance the graph and LLM prompts to include financial data (e.g., product value, late-delivery penalties) to allow the AI to estimate the quantitative financial impact of a disruption.
+
+Dashboard Development: Create a web-based frontend that communicates with the secure REST API to visualize supply chain routes, display alerts on an interactive map, and provide a user-friendly UI for the "What-If" simulation tool.
+
+Proactive Notifications: Integrate with services like Slack, Microsoft Teams, or Twilio to push critical alerts directly to the relevant operations channels and stakeholders.
