@@ -12,6 +12,7 @@ COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ /app/
+RUN python manage.py collectstatic --noinput
 
 # This command starts a web server, which is required for Cloud Run services
 # even if they only do background work.
