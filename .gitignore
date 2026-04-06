@@ -17,3 +17,17 @@ deployer-key.json
 .vscode/
 .idea/
 .DS_Store
+
+# Local ingest artifacts
+data/gdelt/
+
+# Local Cloud SDK component metadata
+google-cloud-sdk/.install/*.manifest
+google-cloud-sdk/.install/*.snapshot.json
+google-cloud-sdk/lib/surface/beta/
+google-cloud-sdk/lib/surface/alpha/
+google-cloud-sdk/lib/third_party/hcl2/.lark_cache.bin
+
+# Local runtime output
+logs/
+reports/
