@@ -1,0 +1,15 @@
+.git
+.gitignore
+.venv
+venv
+google-cloud-sdk
+google-cloud-cli-*.tar.gz
+data
+src/db.sqlite3
+.pytest_cache
+src/.pytest_cache
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.DS_Store
