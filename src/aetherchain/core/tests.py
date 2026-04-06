@@ -168,7 +168,7 @@ class PublicExperienceTests(APITestCase):
     def test_homepage_renders(self):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'SupplyNerva')
+        self.assertContains(response, 'NervaFlow')
         self.assertContains(response, 'Run a scenario in under one minute')
 
     @patch('aetherchain.core.views.run_impact_analysis')
