@@ -1,0 +1,32 @@
+<svg width="1200" height="430" viewBox="0 0 1200 430" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="430" rx="20" fill="#F6F3EC"/>
+  <text x="70" y="72" fill="#1A2A36" font-family="Arial, sans-serif" font-size="40" font-weight="700">How NervaFlow Works</text>
+  <rect x="70" y="118" width="240" height="220" rx="16" fill="#FFFFFF" stroke="#D6D0C4"/>
+  <text x="94" y="162" fill="#196C64" font-family="Arial, sans-serif" font-size="20" font-weight="700">1. Scenario Input</text>
+  <text x="94" y="194" fill="#3C4B57" font-family="Arial, sans-serif" font-size="16">Port / Supplier</text>
+  <text x="94" y="218" fill="#3C4B57" font-family="Arial, sans-serif" font-size="16">SKU / Route filters</text>
+  <text x="94" y="242" fill="#3C4B57" font-family="Arial, sans-serif" font-size="16">Horizon and priority</text>
+
+  <rect x="360" y="118" width="240" height="220" rx="16" fill="#FFFFFF" stroke="#D6D0C4"/>
+  <text x="384" y="162" fill="#196C64" font-family="Arial, sans-serif" font-size="20" font-weight="700">2. Impact Mapping</text>
+  <text x="384" y="194" fill="#3C4B57" font-family="Arial, sans-serif" font-size="16">Neo4j graph resolution</text>
+  <text x="384" y="218" fill="#3C4B57" font-family="Arial, sans-serif" font-size="16">Fallback resilience</text>
+  <text x="384" y="242" fill="#3C4B57" font-family="Arial, sans-serif" font-size="16">Impacted assets set</text>
+
+  <rect x="650" y="118" width="240" height="220" rx="16" fill="#FFFFFF" stroke="#D6D0C4"/>
+  <text x="674" y="162" fill="#196C64" font-family="Arial, sans-serif" font-size="20" font-weight="700">3. Evidence Layer</text>
+  <text x="674" y="194" fill="#3C4B57" font-family="Arial, sans-serif" font-size="16">Vertex AI Search</text>
+  <text x="674" y="218" fill="#3C4B57" font-family="Arial, sans-serif" font-size="16">Snippet + summary</text>
+  <text x="674" y="242" fill="#3C4B57" font-family="Arial, sans-serif" font-size="16">Context enrichment</text>
+
+  <rect x="940" y="118" width="190" height="220" rx="16" fill="#FFFFFF" stroke="#D6D0C4"/>
+  <text x="964" y="162" fill="#196C64" font-family="Arial, sans-serif" font-size="20" font-weight="700">4. Decision</text>
+  <text x="964" y="194" fill="#3C4B57" font-family="Arial, sans-serif" font-size="16">Risk</text>
+  <text x="964" y="218" fill="#3C4B57" font-family="Arial, sans-serif" font-size="16">Confidence</text>
+  <text x="964" y="242" fill="#3C4B57" font-family="Arial, sans-serif" font-size="16">Delay / Cost</text>
+  <text x="964" y="266" fill="#3C4B57" font-family="Arial, sans-serif" font-size="16">Next action</text>
+
+  <path d="M310 226H350" stroke="#176F67" stroke-width="4" stroke-linecap="round"/>
+  <path d="M600 226H640" stroke="#176F67" stroke-width="4" stroke-linecap="round"/>
+  <path d="M890 226H930" stroke="#176F67" stroke-width="4" stroke-linecap="round"/>
+</svg>
