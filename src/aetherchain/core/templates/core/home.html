@@ -1,0 +1,265 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SupplyNerva | Calm Supply Risk Decisions</title>
+  <meta name="description" content="Run clear supply risk scenarios in seconds and get confident next actions without dashboard noise.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,500;6..72,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'core/home.css' %}">
+</head>
+<body>
+  <div class="bg-orb bg-orb-a" aria-hidden="true"></div>
+  <div class="bg-orb bg-orb-b" aria-hidden="true"></div>
+
+  <header class="topbar" data-reveal>
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">SupplyNerva</span>
+    </div>
+    <a class="topbar-link" href="#scenario-flow">Run Scenario</a>
+  </header>
+
+  <main class="page">
+    <section class="hero" data-reveal>
+      <div class="hero-copy">
+        <p class="eyebrow">Decision Platform</p>
+        <h1>Know your next supply action before delays become losses.</h1>
+        <p class="hero-text">
+          SupplyNerva translates disruption signals into one clear recommendation.
+          No control-tower clutter, no analyst-heavy workflow, just practical next steps.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#scenario-flow">Start a What-If Run</a>
+          <a class="btn btn-secondary" href="#how-it-works">See How It Works</a>
+        </div>
+      </div>
+      <div class="hero-panel">
+        <p class="panel-label">Today&rsquo;s Decision Standard</p>
+        <div class="trust-grid">
+          <article class="trust-item">
+            <h3>Clear Priority</h3>
+            <p>One recommended action per scenario, with explicit risk and confidence.</p>
+          </article>
+          <article class="trust-item">
+            <h3>Evidence-Based</h3>
+            <p>Decision packets are grounded in retrieval evidence and impact context.</p>
+          </article>
+          <article class="trust-item">
+            <h3>Operator Speed</h3>
+            <p>Designed for fast decisions during exceptions, not dashboard browsing.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="flow" id="scenario-flow" data-reveal>
+      <div class="flow-header">
+        <p class="eyebrow">Primary Flow</p>
+        <h2>Run a scenario in under one minute</h2>
+      </div>
+
+      <div class="flow-grid">
+        <form id="scenario-form" class="scenario-form" novalidate>
+          <fieldset class="target-toggle">
+            <legend>What is affected?</legend>
+            <label class="toggle-card">
+              <input type="radio" name="target_type" value="location" checked>
+              <span>Port or location</span>
+            </label>
+            <label class="toggle-card">
+              <input type="radio" name="target_type" value="supplier">
+              <span>Supplier</span>
+            </label>
+          </fieldset>
+
+          <div class="form-group" id="location-group">
+            <label for="location-input">Port or location</label>
+            <input id="location-input" name="location" type="text" maxlength="140" placeholder="Port of Los Angeles" list="location-options" autocomplete="off">
+            <datalist id="location-options"></datalist>
+          </div>
+
+          <div class="form-group is-hidden" id="supplier-group">
+            <label for="supplier-input">Supplier</label>
+            <input id="supplier-input" name="supplier_name" type="text" maxlength="140" placeholder="Vietnam Footwear Co." list="supplier-options" autocomplete="off">
+            <datalist id="supplier-options"></datalist>
+          </div>
+
+          <div class="section-divider">Portfolio Filters</div>
+
+          <div class="input-row">
+            <div class="token-builder">
+              <label for="sku-entry">SKUs (optional)</label>
+              <div class="token-entry">
+                <input id="sku-entry" type="text" maxlength="64" placeholder="Type SKU and press Enter" list="sku-options" autocomplete="off">
+                <button class="btn btn-secondary token-add" type="button" id="sku-add">Add</button>
+              </div>
+              <datalist id="sku-options"></datalist>
+              <div class="token-list" id="sku-chips"></div>
+            </div>
+
+            <div class="token-builder">
+              <label for="route-entry">Routes (optional)</label>
+              <div class="token-entry">
+                <input id="route-entry" type="text" maxlength="64" placeholder="Type route ID and press Enter" list="route-options" autocomplete="off">
+                <button class="btn btn-secondary token-add" type="button" id="route-add">Add</button>
+              </div>
+              <datalist id="route-options"></datalist>
+              <div class="token-list" id="route-chips"></div>
+            </div>
+          </div>
+
+          <div class="input-row">
+            <div class="form-group">
+              <label for="event-type">Disruption type</label>
+              <select id="event-type" name="event_type">
+                <option value="Port Congestion">Port Congestion</option>
+                <option value="Supplier Disruption">Supplier Disruption</option>
+                <option value="Weather Impact">Weather Impact</option>
+                <option value="Strike Risk">Labor Strike Risk</option>
+                <option value="Custom Network Risk">Custom Network Risk</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="horizon-days">Planning horizon</label>
+              <select id="horizon-days" name="horizon_days">
+                <option value="">Default horizon</option>
+                <option value="3">3 days</option>
+                <option value="7">7 days</option>
+                <option value="14">14 days</option>
+                <option value="30">30 days</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="business-priority">Business priority (optional)</label>
+            <input id="business-priority" name="business_priority" type="text" maxlength="120" placeholder="Protect OTIF for top 20 lanes">
+          </div>
+
+          <div class="form-group">
+            <label for="context-input">Context note (optional)</label>
+            <textarea id="context-input" name="context_note" rows="3" maxlength="280" placeholder="Add urgent constraints, escalation notes, or customer commitments."></textarea>
+          </div>
+
+          <div class="form-footer">
+            <button id="run-button" class="btn btn-primary btn-block" type="submit">Generate Decision</button>
+            <p class="microcopy">Simulation mode only. Catalog source: <span id="catalog-source">loading...</span>.</p>
+          </div>
+        </form>
+
+        <section class="result-panel" aria-live="polite">
+          <div id="result-empty" class="result-empty">
+            <h3>Your decision packet will appear here</h3>
+            <p>Set your target and optional SKU or route filters to generate an actionable decision packet.</p>
+          </div>
+
+          <div id="result-loading" class="result-loading is-hidden">
+            <div class="pulse-line"></div>
+            <div class="pulse-line short"></div>
+            <p id="loading-message">Analyzing potential impact paths...</p>
+          </div>
+
+          <div id="result-error" class="result-error is-hidden">
+            <h3>We could not complete this run</h3>
+            <p id="error-text">Try adjusting the scenario and run again.</p>
+          </div>
+
+          <div id="result-content" class="result-content is-hidden">
+            <p class="result-kicker">Decision Packet</p>
+            <h3 id="result-title"></h3>
+            <p id="result-impact" class="result-impact"></p>
+            <p id="result-action" class="result-action"></p>
+
+            <div class="meta-grid">
+              <article class="meta-card">
+                <p>Scenario Target</p>
+                <strong id="meta-target">-</strong>
+              </article>
+              <article class="meta-card">
+                <p>Scope</p>
+                <strong id="meta-scope">-</strong>
+              </article>
+            </div>
+
+            <div class="metric-grid">
+              <article class="metric-card">
+                <p>Risk</p>
+                <strong id="metric-risk"></strong>
+              </article>
+              <article class="metric-card">
+                <p>Confidence</p>
+                <strong id="metric-confidence"></strong>
+              </article>
+              <article class="metric-card">
+                <p>Estimated Delay</p>
+                <strong id="metric-delay"></strong>
+              </article>
+              <article class="metric-card">
+                <p>Estimated Cost</p>
+                <strong id="metric-cost"></strong>
+              </article>
+            </div>
+
+            <div class="asset-block">
+              <h4>Impacted assets</h4>
+              <div class="asset-table-wrap">
+                <table class="asset-table">
+                  <thead>
+                    <tr>
+                      <th>SKU</th>
+                      <th>Route</th>
+                      <th>Supplier</th>
+                      <th>Port</th>
+                    </tr>
+                  </thead>
+                  <tbody id="asset-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="evidence-block">
+              <h4>Supporting evidence</h4>
+              <ul id="evidence-list"></ul>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="how" id="how-it-works" data-reveal>
+      <div class="flow-header">
+        <p class="eyebrow">How It Works</p>
+        <h2>Designed for fast operational judgment</h2>
+      </div>
+      <div class="how-grid">
+        <article class="how-card">
+          <span>01</span>
+          <h3>Define disruption scope</h3>
+          <p>Select location or supplier and optionally constrain by SKUs and routes.</p>
+        </article>
+        <article class="how-card">
+          <span>02</span>
+          <h3>Resolve impact and evidence</h3>
+          <p>SupplyNerva maps impacted assets and retrieves supporting external signals.</p>
+        </article>
+        <article class="how-card">
+          <span>03</span>
+          <h3>Act with confidence</h3>
+          <p>Receive one decision packet with risk, confidence, delay, cost, and next action.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer" data-reveal>
+    <p>SupplyNerva is a decision-support system. Final operational approval remains with your team.</p>
+  </footer>
+
+  <script src="{% static 'core/home.js' %}" defer></script>
+</body>
+</html>
