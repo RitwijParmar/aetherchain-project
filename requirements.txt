@@ -9,3 +9,4 @@ google-cloud-pubsub==2.13.11
 requests
 neomodel
 dj-database-url
+whitenoise
