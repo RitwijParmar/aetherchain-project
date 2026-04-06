@@ -25,6 +25,14 @@ jobs:
       with:
         project_id: '${{ secrets.GCP_PROJECT_ID }}'
 
+    - name: Run Unit Tests
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r src/requirements.txt
+        export DJANGO_SECRET_KEY=test-only-key
+        export API_TOKEN=test-token
+        python src/manage.py test aetherchain.core
+
     - name: Build and Push Image
       id: build
       run: |
@@ -43,7 +51,8 @@ jobs:
           --allow-unauthenticated \
           --vpc-connector=aetherchain-connector \
           --vpc-egress=private-ranges-only \
-          --set-secrets="POSTGRES_URI=aetherchain-postgres-uri:latest,NEO4J_PASSWORD=aetherchain-neo4j-password:latest,DJANGO_SECRET_KEY=aetherchain-django-secret-key:latest,API_TOKEN=aetherchain-api-bearer-token:latest"
+          --set-env-vars="GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }},GCP_QUOTA_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }},VERTEX_GENAI_LOCATION=us-central1,CREDIT_FIRST_MODE=true,VERTEX_GENAI_MODEL=,VERTEX_SEARCH_MAX_RESULTS=8,VERTEX_SEARCH_ENABLE_SUMMARY=true,VERTEX_SEARCH_SUMMARY_RESULT_COUNT=3" \
+          --set-secrets="POSTGRES_URI=aetherchain-postgres-uri:latest,NEO4J_PASSWORD=aetherchain-neo4j-password:latest,DJANGO_SECRET_KEY=aetherchain-django-secret-key:latest,API_TOKEN=aetherchain-api-bearer-token:latest,VERTEX_SEARCH_SERVING_CONFIG=aetherchain-vertex-search-serving-config:latest"
 
     - name: Deploy and Run Migrator Job
       run: |
@@ -61,3 +70,22 @@ jobs:
           --region us-central1 \
           --project ${{ secrets.GCP_PROJECT_ID }} \
           --wait
+
+    - name: Smoke Test Deployment
+      run: |
+        SERVICE_URL=$(gcloud run services describe aetherchain-worker \
+          --region us-central1 \
+          --project ${{ secrets.GCP_PROJECT_ID }} \
+          --format='value(status.url)')
+
+        echo "Service URL: ${SERVICE_URL}"
+        curl -fsS "${SERVICE_URL}/healthz/"
+
+        API_TOKEN=$(gcloud secrets versions access latest \
+          --project ${{ secrets.GCP_PROJECT_ID }} \
+          --secret aetherchain-api-bearer-token)
+
+        curl -fsS -X POST "${SERVICE_URL}/api/simulate/" \
+          -H "Authorization: Bearer ${API_TOKEN}" \
+          -H "Content-Type: application/json" \
+          -d '{"location":"Port of Los Angeles","event_type":"Port Congestion"}'
