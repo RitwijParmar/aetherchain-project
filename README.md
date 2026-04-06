@@ -1,197 +1,430 @@
+# SupplyNerva (AetherChain Project)
 
+SupplyNerva is a production-oriented supply risk decision product built on top of the AetherChain codebase.
 
-# **AetherChain: A Predictive Supply Chain Intelligence Platform**
+It answers one operator question fast:
 
-**Status:** Stable, Production Ready
-**Author:** Ritwij Parmar
+> Given a disruption, what action should we take now?
 
-## **1. Introduction & Project Philosophy**
+The app combines graph impact mapping, retrieval-backed evidence, deterministic scoring, and optional generative narrative refinement.
 
-AetherChain is a serverless intelligence platform built on Google Cloud Platform, designed to transform supply chain management from a reactive to a proactive discipline.
+## 1. Product Snapshot
 
-Our core philosophy is that in an increasingly volatile world, organizations can no longer afford to learn about disruptions after they have occurred. AetherChain was built to serve as an autonomous early warning system. It continuously scans for real-world events, uses a graph-based representation of the supply chain to understand complex relationships, and leverages Large Language Models to translate raw data into human-readable, actionable intelligence.
+- Product name: `SupplyNerva`
+- Repository name: `aetherchain-project`
+- Runtime type: Django API + web app on Cloud Run
+- Main mode: scenario simulation (non-destructive)
+- Decision output: structured packet (`risk`, `confidence`, `delay`, `cost`, `recommended_action`, evidence)
 
-This document serves as the single source of truth for the project's architecture, code, operational procedures, and future roadmap.
+Core user outcomes:
 
----
+1. Define a disruption scope (port/supplier/SKU/route).
+2. Generate a decision packet in seconds.
+3. Understand impacted assets and act with one recommended next step.
 
-## **2. Important Notice: Operational Status & Service Dependencies**
+## 2. Interface Guide (Complete UI Walkthrough)
 
-This project's architecture relies on several best-in-class, third-party managed services for its core database functionality. It is critical for any user or developer to be aware of the current billing status of these dependencies.
+The public interface is served from `/`.
 
-*   **Trial Account Dependency:** The **Neo4j AuraDB** (graph database) and **Supabase** (PostgreSQL database) instances for this project are currently configured using **free-tier or time-limited trial accounts.** These accounts are subject to suspension, data deletion, or functional limitations upon the expiration of their respective trial periods.
+### 2.1 Home / Hero
 
-*   **Impact on Functionality:** Should these external services be suspended, the AetherChain platform will **cease to function correctly,** as it will lose its ability to read from its knowledge graph and write to its alert log. All API endpoints that rely on this data will fail.
+- Brand and product framing for supply decisioning.
+- CTA to jump directly into the scenario flow.
 
-*   **Recommendation for Production Use:** For long-term stability and any mission-critical or production-level deployment, it is **essential to upgrade the Neo4j AuraDB and Supabase accounts to a permanent, paid billing plan.**
+### 2.2 Scenario Form (Primary Flow)
 
-Furthermore, the **Google Cloud Platform** components are operating on a standard, post-free-trial account. All usage of Cloud Run, Cloud Functions, Vertex AI, and other GCP services will incur costs according to standard pricing.
+The operator panel supports both broad and narrow scenario scopes.
 
----
+Target selection:
 
-## **3. Core Capabilities**
+- `Port or location` (radio)
+- `Supplier` (radio)
 
-*   **Event-Driven Architecture:** A decoupled and scalable system built on Google Cloud Pub/Sub, ensuring that components can evolve independently.
-*   **AI-Powered Analysis:** Leverages the **Mistral Small model via Google Vertex AI** to perform Retrieval-Augmented Generation (RAG). This transforms a simple list of affected assets into a qualitative impact analysis and a specific, actionable recommendation.
-*   **Graph-Based Intelligence:** The supply chain is modeled as a rich graph in **Neo4j AuraDB**. This allows for complex, multi-tier impact analysis that traditional databases cannot perform, such as analyzing disruptions by a specific port or a single component supplier.
-*   **"What-If" Simulation:** A secure API endpoint allows for on-demand risk assessment of hypothetical scenarios, enabling strategic planning.
-*   **Automated Intelligence Gathering:** A scheduled **Google Cloud Function** acts as an autonomous "sentinel," continuously scanning the GDELT news API for potential disruption events.
-*   **Automated CI/CD:** A fully configured GitHub Actions pipeline provides continuous integration and deployment, enabling rapid, reliable, and zero-touch updates to the platform.
+Target input:
 
-## **4. Technology Stack**
+- Location text input with live catalog suggestions (`datalist`).
+- Supplier text input with live catalog suggestions (`datalist`).
 
-*   **Backend:** Python 3.11, Django, Gunicorn
-*   **Cloud Platform:** Google Cloud Platform (GCP)
-    *   **Compute:** Cloud Run (Services & Jobs), Cloud Functions
-    *   **Messaging:** Cloud Pub/Sub
-    *   **Networking:** VPC, VPC Connector
-    *   **AI/ML:** Vertex AI
-    *   **Security:** Secret Manager, IAM
-    *   **Deployment:** Cloud Build, GitHub Actions
-*   **Databases:**
-    *   **Graph Database:** Neo4j AuraDB (Cloud Hosted - **Trial Account**)
-    *   **Relational Database:** Supabase (Cloud Hosted PostgreSQL - **Trial Account**)
-*   **Data Source:** GDELT Project API
+Portfolio filters (optional but first-class):
 
-## **5. Architectural Deep Dive**
+- SKU token input:
+  - type value
+  - press `Enter` or click `Add`
+  - tokenized chips with remove action
+- Route token input:
+  - same UX as SKU token input
 
-The system operates through a seamless, automated flow:
+Scenario controls:
 
-1.  **Scheduled Trigger:** The **Google Cloud Scheduler** job `run-gdelt-sentinel-daily` runs once per day, making an HTTP GET request to the `aetherchain-gdelt-sentinel` Cloud Function.
+- `Disruption type` selector
+- `Planning horizon` selector (`3`, `7`, `14`, `30` days)
+- `Business priority` text field
+- `Context note` free text
 
-2.  **Intelligence Gathering (`aetherchain-gdelt-sentinel`):** The **Cloud Function** queries the GDELT news API for articles from the last 24 hours matching keywords like "port congestion." If relevant events are found, it publishes a JSON message to the **`aetherchain-tasks` Pub/Sub Topic**.
+Submission:
 
-3.  **Core Analysis Pipeline (`aetherchain-worker`):** The **Django-based service** receives the event, connects to **Neo4j AuraDB**, and executes a Cypher query. It constructs a prompt for the **Vertex AI (Mistral Small) API** and saves the structured JSON response to the **Supabase PostgreSQL** database.
+- `Generate Decision` button submits JSON to `/experience/simulate/`
+- Simulation is non-destructive and does not write alert rows
 
-4.  **Data Access & Simulation (API):** A secure, token-protected **REST API** (`/api/alerts/` and `/api/simulate/`) exposes the platform's intelligence for consumption.
+### 2.3 Result Panel
 
-## **6. Project Setup and Local Development**
+State management:
 
-### **6.1. Prerequisites**
+- Empty state: prompt to run scenario
+- Loading state: rotating analysis messages
+- Error state: actionable message
+- Success state: full decision packet
 
-*   Python 3.11
-*   `gcloud` CLI (authenticated to your GCP account)
-*   Docker Desktop
-*   Git
+Success view contains:
 
-### **6.2. Initial Setup**
+- `summary_description`
+- `impact_analysis`
+- `recommended_action`
+- `Scenario Target` and scoped summary
+- Metrics:
+  - risk
+  - confidence
+  - estimated delay
+  - estimated cost
+- Impacted assets table:
+  - SKU
+  - route
+  - supplier
+  - port
+- Supporting evidence list (title/snippet/link)
 
-1.  **Clone the Repository:**
-    ```bash
-    git clone https://github.com/RitwijParmar/aetherchain-project.git
-    cd aetherchain-project
-    ```
-2.  **Set Up Virtual Environment:**
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
-    ```
-3.  **Local Environment Configuration:** Create a `.env` file in the project root. This file is ignored by Git and must never be committed.
+### 2.4 Catalog Behavior
 
-    **File: `.env`**
-    ```
-    POSTGRES_URI="[Your Supabase PostgreSQL URI]"
-    NEO4J_URI="[Your Neo4j AuraDB Host]"
-    NEO4J_USERNAME="neo4j"
-    NEO4J_PASSWORD="[Your Neo4j Password]"
-    GCP_PROJECT_ID="aetherchain-v2"
-    SECRET_KEY="[A strong, randomly generated Django Secret Key]"
-    API_TOKEN="[A strong, randomly generated API Token for local testing]"
-    ```
+The frontend fetches `/experience/catalog/` for live options:
 
-### **6.3. Database Seeding**
+- `ports`
+- `suppliers`
+- `skus`
+- `routes`
 
-#### **6.3.1. Neo4j Graph Database**
+Catalog source indicator:
 
-Run the following query in your Neo4j Aura Browser to ensure a clean and correctly structured graph. This script is idempotent and can be run safely multiple times.
+- `live graph` (Neo4j-backed)
+- `fallback catalog` (in-app fallback data)
 
-```cypher
-// This script will idempotently create the required graph schema.
-MERGE (p1:Port {name: 'Port of Los Angeles'});
-MERGE (r1:Route {route_id: 'VNHCM-USLAX'});
-MERGE (prod1:Product {sku: 'SHOE-ABC'});
-MERGE (prod2:Product {sku: 'BOOT-XYZ'});
-MERGE (s1:Supplier {name: 'Vietnam Footwear Co.', location: 'Ho Chi Minh City, Vietnam'});
+## 3. API Surface
 
-// Merge relationships to ensure a fully connected graph
-MERGE (r1)-[:DESTINED_FOR]->(p1);
-MERGE (prod1)-[:CARRIES]->(r1);
-MERGE (prod2)-[:CARRIES]->(r1);
-MERGE (s1)-[:SUPPLIES]->(prod1);
+All endpoints are defined under `src/aetherchain/core/urls.py`.
+
+Public endpoints:
+
+- `GET /` - SupplyNerva web app
+- `GET /healthz/` - health check
+- `GET /experience/catalog/` - scenario option catalog
+- `POST /experience/simulate/` - public simulation endpoint
+
+Worker and protected endpoints:
+
+- `POST /process_task/` - Pub/Sub push worker ingress
+- `POST /api/simulate/` - bearer-protected simulation endpoint
+- `GET /api/alerts/` - bearer-protected historical alerts
+
+### 3.1 `GET /experience/catalog/`
+
+Query params:
+
+- `kind`: `all | ports | suppliers | skus | routes`
+- `q`: free text filter
+- `location`: optional location context
+- `supplier_name`: optional supplier context
+- `limit`: bounded option count (`5..50`)
+
+Response shape (example):
+
+```json
+{
+  "source": "fallback",
+  "query": "",
+  "ports": ["Port of Los Angeles"],
+  "suppliers": ["Vietnam Footwear Co."],
+  "skus": ["SHOE-ABC"],
+  "routes": ["VNHCM-USLAX"]
+}
 ```
 
-#### **6.3.2. PostgreSQL Database**
+### 3.2 `POST /experience/simulate/`
 
-Run standard Django migrations to create the `Alert` table.
+Accepted input fields:
+
+- `location` (optional)
+- `supplier_name` (optional)
+- `product_skus` or `product_sku` (optional)
+- `route_ids` or `route_id` (optional)
+- `event_type` (optional, auto-derived if absent)
+- `horizon_days` (optional)
+- `business_priority` (optional)
+- `context_note` (optional)
+
+Validation rule:
+
+- At least one target must be provided from:
+  - location
+  - supplier_name
+  - product_skus
+  - route_ids
+
+Response includes:
+
+- `summary_description`
+- `impact_analysis`
+- `recommended_action`
+- `event_type`
+- `event_target`
+- `risk_score`
+- `confidence_score`
+- `estimated_delay_days`
+- `estimated_cost_impact_usd`
+- `evidence_summary`
+- `raw_context`
+
+## 4. Decision Pipeline
+
+Execution flow for simulation and worker path:
+
+1. Normalize scenario payload.
+2. Build graph lookup query from target/scope.
+3. Resolve impacted assets from Neo4j.
+4. If graph unavailable or empty and fallback enabled, synthesize fallback impacted assets.
+5. Retrieve supporting evidence from Vertex AI Search (Discovery Engine).
+6. Build deterministic decision packet:
+   - risk
+   - confidence
+   - delay
+   - cost
+   - recommendation
+7. Optionally refine narrative with Vertex GenAI model (if enabled).
+8. Return packet (simulate) or persist `Alert` (worker).
+
+## 5. Data Model
+
+Django model `Alert` stores decision outputs:
+
+- event metadata
+- narrative output
+- quantified scores
+- evidence summary
+- raw context
+
+Key fields:
+
+- `event_type`
+- `event_target`
+- `summary_description`
+- `impact_analysis`
+- `recommended_action`
+- `risk_score`
+- `confidence_score`
+- `estimated_delay_days`
+- `estimated_cost_impact_usd`
+- `evidence_summary` (`JSONField`)
+- `raw_context` (`JSONField`)
+
+## 6. GenAI and Search Stack
+
+Designed to maximize GenAI-trial usage while keeping non-GenAI spend controlled.
+
+Primary GenAI consumption paths:
+
+1. Vertex AI Search / Discovery Engine
+   - search retrieval
+   - advanced summary generation
+2. Direct GenAI load scripts
+   - Search answer traffic
+   - Conversational Agents Playbook traffic
+
+Optional narrative generation:
+
+- Vertex model call from `genai.py`
+- gated by:
+  - `CREDIT_FIRST_MODE`
+  - `VERTEX_GENAI_MODEL`
+
+## 7. Data Engineering Backbone
+
+GDELT ingest pipeline:
+
+- extract articles from GDELT
+- normalize to Discovery document schema
+- dedupe and batch import
+- persist raw and normalized artifacts for auditability
+
+Key command:
+
 ```bash
-python src/manage.py migrate
+python src/manage.py ingest_gdelt_discovery \
+  --project-id <PROJECT_ID> \
+  --datastore-id supplynerva-store \
+  --lookback-hours 6 \
+  --max-records 50 \
+  --max-import 40 \
+  --batch-size 20
 ```
 
-### **6.4. Running the Local Development Server**
+Guardrail options:
+
+- monthly net budget cap
+- billing export table auto-discovery
+- fail-closed behavior when configured
+
+## 8. DevOps and Deployment
+
+### 8.1 Runtime
+
+- Cloud Run service hosts web + API
+- Worker ingress endpoint supports Pub/Sub push events
+
+### 8.2 Build and delivery
+
+- Dockerized app (`Dockerfile`, `src/Dockerfile`)
+- Cloud Build for image build/push
+- GitHub Actions workflow for deploy automation
+
+### 8.3 Cost and billing observability
+
+SQL toolkit under `sql/` provides:
+
+- daily GenAI vs non-GenAI spend view
+- credit attribution checks
+- top non-GenAI leaks
+- monthly net guardrail status
+
+### 8.4 Automation scripts
+
+Under `scripts/`:
+
+- `setup_genai_max.sh`
+- `provision_discovery_search.py`
+- `provision_playbook_agent.py`
+- `provision_ingest_automation.sh`
+- `run_credit_first_ingest.sh`
+- `run_direct_genai_load.py`
+
+## 9. Local Development
+
+### 9.1 Prerequisites
+
+- Python `3.11`
+- Docker
+- Google Cloud SDK
+- authenticated GCP account with project access
+
+### 9.2 Install
+
 ```bash
-python src/manage.py runserver
+git clone https://github.com/RitwijParmar/aetherchain-project.git
+cd aetherchain-project
+python3 -m venv venv
+source venv/bin/activate
+pip install -r src/requirements.txt
 ```
 
-## **7. Automated CI/CD Deployment**
+### 9.3 Environment
 
-The project is configured with a complete CI/CD pipeline using GitHub Actions. All deployments are handled automatically upon pushing to the `main` branch.
+Set `.env` (never commit secrets):
 
-### **7.1. Deployment Prerequisites (One-Time Setup)**
+```env
+POSTGRES_URI=
+NEO4J_URI=
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=
+GCP_PROJECT_ID=
+GCP_QUOTA_PROJECT_ID=
+DJANGO_SECRET_KEY=
+API_TOKEN=
+VERTEX_SEARCH_SERVING_CONFIG=
+VERTEX_SEARCH_MAX_RESULTS=8
+VERTEX_SEARCH_ENABLE_SUMMARY=true
+VERTEX_SEARCH_SUMMARY_RESULT_COUNT=3
+CREDIT_FIRST_MODE=true
+VERTEX_GENAI_MODEL=
+VERTEX_GENAI_LOCATION=us-central1
+VERTEX_GENAI_MAX_OUTPUT_TOKENS=350
+ENABLE_GRAPH_FALLBACK=true
+EXTERNAL_REQUEST_TIMEOUT_SECONDS=20
+```
 
-*   All necessary GCP APIs are enabled (`cloudbuild.googleapis.com`, `run.googleapis.com`, `secretmanager.googleapis.com`, etc.).
-*   A **GitHub Environment** named `production` has been created.
-*   The `GCP_PROJECT_ID` and `GCP_SA_KEY` (a JSON key for a dedicated GCP service account) secrets are stored as **Environment Secrets** within the `production` environment on GitHub.
-*   The application secrets (`aetherchain-postgres-uri`, `aetherchain-neo4j-password`, etc.) are stored in **Google Cloud Secret Manager**.
-*   All necessary **IAM Permissions** are granted to the relevant service accounts as outlined in the project's operational history.
+### 9.4 Run
 
-### **7.2. The CI/CD Workflow**
-
-The `.github/workflows/deploy.yml` file governs the deployment. It automatically builds a new Docker image, deploys it to the `aetherchain-worker` service with all secrets mounted, and runs the `aetherchain-migrator` job.
-
-### **7.3. How to Deploy**
-
-Simply commit your changes and push them to the `main` branch. The CI/CD pipeline will handle the rest.
 ```bash
-git push origin main
+cd src
+python manage.py migrate
+python manage.py runserver
 ```
 
-## **8. API Reference**
+Then open:
 
-**Base URL:** `https://aetherchain-worker-210451460324.us-central1.run.app`
+- `http://127.0.0.1:8000/`
 
-### **8.1. List Alerts**
+## 10. Testing
 
-*   **Endpoint:** `/api/alerts/`
-*   **Method:** `GET`
-*   **Authentication:** Bearer Token
-*   **Headers:** `Authorization: Bearer [YOUR_API_TOKEN]`
+Run full tests:
 
-### **8.2. "What-If" Simulation**
+```bash
+cd src
+python manage.py test aetherchain.core.tests
+```
 
-*   **Endpoint:** `/api/simulate/`
-*   **Method:** `POST`
-*   **Authentication:** Bearer Token
-*   **Headers:** `Authorization: Bearer [YOUR_API_TOKEN]`, `Content-Type: application/json`
-*   **Request Body (Supplier Disruption):**
-    ```json
-    {
-        "supplier_name": "Vietnam Footwear Co."
-    }
-    ```
-*   **Request Body (Location Disruption):**
-    ```json
-    {
-        "location": "Port of Los Angeles"
-    }
-    ```
-*   **Success Response (200 OK):** The direct, unsaved JSON analysis from the LLM.
+Coverage includes:
 
-## **9. Future Roadmap**
+- public simulate behavior
+- protected API behavior
+- catalog fallback behavior
+- retrieval fallback behavior
+- graph fallback behavior
+- ingest utility normalization
 
-With the core platform now stable and automated, the following strategic initiatives can be pursued:
+## 11. Repository Structure
 
-1.  **Upgrade Service Plans:** The highest priority is to move the Neo4j and Supabase databases to permanent, paid plans to ensure production stability and remove the limitations of the trial accounts.
-2.  **Financial Impact Analysis:** Enhance the graph and LLM prompts to include financial data (e.g., product value, late-delivery penalties) to allow the AI to estimate the quantitative financial impact of a disruption.
-3.  **Dashboard Development:** Create a web-based frontend that communicates with the secure REST API to visualize supply chain routes, display alerts on an interactive map, and provide a user-friendly UI for the "What-If" simulation tool.
-4.  **Proactive Notifications:** Integrate with services like Slack, Microsoft Teams, or Twilio to push critical alerts directly to the relevant operations channels and stakeholders.
+```text
+src/aetherchain/core/
+  views.py                 # API and web endpoint handlers
+  tasks.py                 # impact analysis orchestration
+  decision_engine.py       # deterministic decision scoring
+  retrieval.py             # Vertex Search evidence retrieval
+  genai.py                 # optional GenAI narrative generation
+  catalog.py               # scenario catalog provider
+  tests.py                 # API, retrieval, ingest, and UI flow tests
+  templates/core/home.html # SupplyNerva interface
+  static/core/home.css     # SupplyNerva styles
+  static/core/home.js      # SupplyNerva client behavior
+scripts/                   # provisioning and load/automation scripts
+sql/                       # billing and credit guardrail SQL pack
+```
+
+## 12. Operational Notes
+
+- Neo4j or retrieval outages do not hard-stop all paths if fallback mode is enabled.
+- Simulation endpoint is intentionally non-persistent.
+- Worker endpoint can persist alerts for event-driven pipelines.
+- If billing export is not configured, SQL guardrail queries will not return full coverage.
+
+## 13. Security and Secrets
+
+- Store credentials in Secret Manager for cloud runtime.
+- Use least-privilege IAM for service accounts.
+- Avoid hardcoding tokens, URIs, and API keys.
+- Keep `.env` local only.
+
+## 14. Known Limitations
+
+- Fallback catalog values are static and should be replaced by production data sources.
+- Graph completeness determines quality of impacted asset resolution.
+- Discovery indexing is asynchronous; recent ingests may not appear immediately.
+- Python 3.9 local environments can break newer Cloud SDK commands; prefer Python 3.10+.
+
+## 15. Roadmap (Practical Next Steps)
+
+1. Connect production-grade master data source for ports/suppliers/SKUs/routes.
+2. Add authenticated tenant/org model for multi-team usage.
+3. Add scenario history and comparison views in UI.
+4. Add SLA-aware recommendation policy variants.
+5. Add richer incident timeline and operator collaboration notes.
+
+## 16. License
+
+No explicit license file is currently present. Add a repository license before public/commercial distribution.
