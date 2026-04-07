@@ -26,6 +26,10 @@ NervaFlow compresses that synthesis into a single operator flow:
 
 ![NervaFlow Flow](docs/images/nervaflow-flow.svg)
 
+## Demo video
+
+<video src="artifacts/video/nervaflow_demo_linkedin_1080p.mp4" controls muted playsinline width="100%"></video>
+
 ### Operator flow in one screen
 
 - Choose target: location or supplier
